@@ -80,6 +80,7 @@ td:first-child{white-space:nowrap}
       <span><i class="sw" style="background:var(--fore)"></i>前掌段与随动件</span>
       <span><i class="sw" style="background:#8f98a2"></i>支架与标准件</span>
       <span><i class="sw" style="background:#e9b93a"></i>磨盘</span>
+      <span><i class="sw" style="background:#d9534f;opacity:.5"></i>机械臂禁入区（后跟侧，夹具件不得进入）</span>
     </div>
     <div class="view" id="view">
       <div class="hint">拖动旋转 · 滚轮/双指缩放</div>
@@ -98,6 +99,7 @@ td:first-child{white-space:nowrap}
         <button type="button" id="bShoe" aria-pressed="true">鞋</button>
         <button type="button" id="bCut" aria-pressed="false">剖开</button>
         <button type="button" id="bLbl" aria-pressed="true">标注</button>
+        <button type="button" id="bZone" aria-pressed="true">禁入区</button>
       </div>
     </div>
     <div class="steps" id="steps"></div>
@@ -115,7 +117,7 @@ td:first-child{white-space:nowrap}
         <tr><td>① 后跟段</td><td>唯一定位基准，兼磨削背撑</td><td><span class="tag mk">自制</span> 楦模型切出</td></tr>
         <tr><td>② 前掌段</td><td>把鞋撑直、向前拉紧；比真楦瘦 3–5 mm</td><td><span class="tag mk">自制</span> 打印</td></tr>
         <tr><td>③ 导轨滑块</td><td>前掌直线导向</td><td><span class="tag std">标准件</span> 微型导轨</td></tr>
-        <tr><td>④ 快速夹钳</td><td>过死点自锁，推出 15 mm</td><td><span class="tag std">标准件</span> 推拉式</td></tr>
+        <tr><td>④ 快速夹钳</td><td>装在鞋头前方，经拉框把前掌拉向鞋头 15 mm，过死点自锁</td><td><span class="tag std">标准件</span> 推拉式</td></tr>
         <tr><td>⑤ 碟簧组</td><td>锁紧力定值，吸收鞋长差</td><td><span class="tag std">标准件</span></td></tr>
         <tr><td>⑥ 立柱底板</td><td>两销一面安装，3 个标定球</td><td><span class="tag mk">自制</span> 铝板</td></tr>
         <tr><td>⑦ 磨头力控</td><td>恒力打磨，吸收鞋间外形差</td><td>现有</td></tr>
@@ -126,7 +128,7 @@ td:first-child{white-space:nowrap}
       <ul>
         <li>松开时楦的每一点都往鞋里收；卡住鞋的对角线约 <span class="num">140 → 126 mm</span>（按鞋模型中线剖面估算）。</li>
         <li>定位只靠一个固定面：后跟段。前掌只负责“拉”，不负责“定”，所以鞋长差一两毫米不影响后跟位置。</li>
-        <li>磨削力压在后跟段上，经立柱直通底板；后跟周围 ±90° 没有夹具件。</li>
+        <li>磨削力压在后跟段上，经立柱直通底板；后跟一侧从底板到鞋底全部留空，夹钳和手柄都在鞋头一侧。</li>
         <li>自制件只有两段楦体和几块板，其余都能买到。</li>
       </ul>
     </section>
@@ -188,15 +190,16 @@ const C={heel:0x2f6fb5,fore:0xd9822b,steel:0x8f98a2,dark:0x5d6670,base:0x6f7882,
 
 // ---------- 固定部分
 const fixed=new THREE.Group(); scene.add(fixed);
-box(fixed,-170,170,-262,-250,-90,90,C.base);
+box(fixed,-170,225,-262,-250,-90,90,C.base);
 [[-150,-70],[150,70]].forEach(([x,z])=>cyl(fixed,4,14,0xdddddd,[x,-245,z]));          // 定位销
 [[-155,70],[155,-70],[0,-80]].forEach(([x,z])=>{const s=new THREE.Mesh(new THREE.SphereGeometry(6,20,14),M(0xe0e3e6));s.position.set(x,-244,z);fixed.add(s)}); // 标定球
 box(fixed,-92,-64,-250,-100,-14,14,C.steel);           // 立柱（穿过鞋口）
-box(fixed,-64,80,-182,-170,-20,20,C.steel);            // 横梁
+box(fixed,-64,205,-182,-170,-20,20,C.steel);           // 横梁：向鞋头方向伸到鞋外
 const gus=new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape([new THREE.Vector2(-64,-250),new THREE.Vector2(-64,-182),new THREE.Vector2(10,-182)]),{depth:10,bevelEnabled:false}),M(C.steel));gus.position.z=-5;fixed.add(gus);
 box(fixed,-40,72,-170,-162,-6,6,C.rail);               // 导轨
-box(fixed,-98,-50,-186,-166,24,42,C.dark);             // 夹钳本体
-box(fixed,-98,-50,-170,-166,14,24,C.steel);            // 夹钳支架
+box(fixed,105,155,-182,-166,30,46,C.dark);             // 夹钳本体：在鞋头前方、鞋外
+box(fixed,105,155,-182,-174,20,30,C.steel);            // 夹钳支架
+box(fixed,186,200,-250,-182,-14,14,C.steel);           // 横梁前端支撑
 const heelMat=M(C.heel,1,true); const heel=meshFrom(D.heel,heelMat); fixed.add(heel);
 
 // ---------- 随动部分（前掌 + 滑块 + 推块）
@@ -204,17 +207,22 @@ const mover=new THREE.Group(); scene.add(mover);
 mover.add(meshFrom(D.fore,M(C.fore,1,true)));
 box(mover,-20,10,-162,-150,-13,13,C.fore);             // 滑块
 box(mover,-14,0,-150,-92,-7,7,C.fore);                 // 摆臂：穿过鞋口进入前掌
-box(mover,-20,-12,-186,-150,13,42,C.fore);             // 推块
+box(mover,-20,-8,-162,-150,13,28,C.fore);              // 拉框：滑块侧耳
+box(mover,-20,192,-162,-154,22,28,C.fore);             // 拉框：侧杆，向前绕过夹钳
+box(mover,184,192,-182,-154,22,48,C.fore);             // 拉框：前横梁，夹钳推它向前
 // ---------- 夹钳活动件
-const plunger=cyl(scene,4,1,C.rail,[0,-176,33],'x');
+const plunger=cyl(scene,4,1,C.rail,[0,-174,38],'x');
 const springs=new THREE.Group(); scene.add(springs);
 for(let i=0;i<4;i++){const s=new THREE.Mesh(new THREE.CylinderGeometry(9,6,2,24),M(C.spring));s.rotation.z=(i%2?-1:1)*Math.PI/2;s.position.x=i*2+1;springs.add(s)}
-springs.position.set(0,-176,33);
-const handle=new THREE.Group(); handle.position.set(-98,-176,33); scene.add(handle);
+springs.position.set(0,-174,38);
+const handle=new THREE.Group(); handle.position.set(105,-174,38); scene.add(handle);
 cyl(handle,6,10,C.dark,[0,0,0]);
 const hb=new THREE.Mesh(new THREE.BoxGeometry(84,7,10),M(C.dark)); hb.position.x=42; handle.add(hb);
 const grip=new THREE.Mesh(new THREE.CylinderGeometry(8,8,40,20),M(0xd04a3a)); grip.rotation.z=Math.PI/2; grip.position.x=92; handle.add(grip);
 
+// ---------- 后跟侧禁入区：后跟弧心向后 ±90°，从底板到鞋底上方
+const zone=new THREE.Mesh(new THREE.CylinderGeometry(270,270,270,48,1,false,Math.PI,Math.PI),new THREE.MeshBasicMaterial({color:0xd9534f,transparent:true,opacity:.07,depthWrite:false,side:THREE.DoubleSide}));
+zone.position.set(-100,-248+135,0); scene.add(zone);
 // ---------- 鞋
 const shoePivot=new THREE.Group(); scene.add(shoePivot);
 const shoeIn=new THREE.Group(); shoeIn.position.set(-150,30,0); shoePivot.add(shoeIn);
@@ -247,7 +255,7 @@ const labels=[
  ['2','前掌段（可退回）',()=>new THREE.Vector3(70+mover.position.x,-60,34)],
  ['3','导轨+滑块',()=>new THREE.Vector3(30,-160,-14)],
  ['4','推拉式快速夹钳',()=>handle.localToWorld(new THREE.Vector3(96,0,0))],
- ['5','碟簧组',()=>springs.position.clone().add(new THREE.Vector3(4,22,14))],
+ ['5','碟簧组',()=>springs.position.clone().add(new THREE.Vector3(4,48,10))],
  ['6','立柱+底板',()=>new THREE.Vector3(140,-256,88)],
  ['7','磨头+力控',()=>tool.localToWorld(new THREE.Vector3(-135,40,0))]
 ].map(([n,txt,fn])=>{const e=document.createElement('div');e.className='lbl';e.innerHTML='<b>'+n+'</b>'+txt;view.appendChild(e);return {e,fn}});
@@ -258,7 +266,7 @@ const PH=[
  {t:0,  name:'起始',   cap:'起始状态：夹钳松开，前掌退回 15 mm，楦比鞋短一截。'},
  {t:1,  name:'① 套鞋头', cap:'① 套鞋头：鞋底朝上，鞋头先套进前掌段。'},
  {t:3,  name:'② 鞋跟翻入', cap:'② 鞋跟口翻过后跟段：松开时卡鞋的对角线短了约 13 mm，按一下就进去，不用硬拉。'},
- {t:4.5,name:'③ 锁紧定位', cap:'③ 扳夹钳：前掌被推向鞋头 15 mm（碟簧定力），鞋被撑直，后跟内壁靠死在后跟段上，定位在这一刻完成。'},
+ {t:4.5,name:'③ 锁紧定位', cap:'③ 在鞋头一侧扳夹钳：夹钳向前推拉框，拉框带前掌向鞋头走 15 mm（碟簧定力），鞋被撑直，后跟内壁靠死在后跟段上，定位在这一刻完成。'},
  {t:6,  name:'④ 打磨', cap:'④ 打磨：磨头沿后跟 ±70° 走，力控保持恒压；磨削力压在后跟段上，经立柱传到底板。后跟周围没有夹具件。'},
  {t:12, name:'⑤ 松开', cap:'⑤ 松开夹钳：前掌退回 15 mm，鞋立刻变松。'},
  {t:13.5,name:'⑥ 取鞋', cap:'⑥ 取鞋：鞋跟口往上一翻，朝鞋头方向拔出。'}];
@@ -268,8 +276,8 @@ function apply(t){
   const s=t<4.5?-15:t<6?lerp(-15,0,seg(t,4.5,6)):t<12?0:t<13.5?lerp(0,-15,seg(t,12,13.5)):-15;
   mover.position.x=s;
   const lock=(s+15)/15;                                   // 0 松开 → 1 锁紧
-  handle.rotation.y=-lerp(100,178,lock)*Math.PI/180;
-  const tip=-28+s; plunger.scale.y=(tip-(-50)); plunger.position.x=(-50+tip)/2; springs.position.x=tip;
+  handle.rotation.y=-lerp(115,8,lock)*Math.PI/180;
+  const tip=176+s; plunger.scale.y=(tip-155); plunger.position.x=(155+tip)/2; springs.position.x=tip;
   heelMat.emissive.setHex(t>5.4&&t<6.2?0x0d3d1c:0x000000);
   // 鞋姿态：抬升/平移/后跟上翻角
   let rot,lift=0,fwd=0;
@@ -315,6 +323,7 @@ const tog=(id,f)=>{const b=document.getElementById(id);b.onclick=()=>{const on=b
 tog('bShoe',on=>{shoePivot.visible=on});
 tog('bCut',on=>{cutMats.forEach(m=>{m.clippingPlanes=on?[cut]:[];m.needsUpdate=true})});
 tog('bLbl',on=>{lblOn=on});
+tog('bZone',on=>{zone.visible=on});
 let drag=null;
 view.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];view.setPointerCapture(e.pointerId);view.style.cursor='grabbing'});
 view.addEventListener('pointermove',e=>{if(!drag)return;th+=(e.clientX-drag[0])*.008;ph=Math.min(3.1,Math.max(.02,ph-(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];draw()});
